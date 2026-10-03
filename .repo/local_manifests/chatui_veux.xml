@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="chatui-github" fetch="https://github.com/" />
+  <project name="xiaomi-sm6375-devs/android_device_xiaomi_veux" path="device/xiaomi/veux" remote="chatui-github" revision="lineage-23.2" clone-depth="1" />
+</manifest>
