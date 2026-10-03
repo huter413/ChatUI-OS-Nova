@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chatui_settings_brand" translatable="false">ChatUI OS</string>
+    <string name="chatui_settings_device" translatable="false">ChatUI Nova</string>
+</resources>
