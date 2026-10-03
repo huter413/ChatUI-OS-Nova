@@ -1,5 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="chatui_product_name" translatable="false">ChatUI OS</string>
-    <string name="chatui_device_name" translatable="false">ChatUI Nova</string>
-</resources>
+<resources><string name="chatui_product_name" translatable="false">ChatUI OS</string><string name="chatui_device_name" translatable="false">ChatUI Nova</string></resources>
