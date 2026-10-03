@@ -1,0 +1,58 @@
+name: ChatUI OS Nova ROM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: chatui-nova-rom
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout ChatUI build configuration
+        uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 libncurses5-dev x11proto-core-dev libx11-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig ccache python3 python3-pip bc rsync lz4 libssl-dev libelf-dev
+      - name: Configure repo
+        run: |
+          git config --global user.name "ChatUI OS Builder"
+          git config --global user.email "chatui-builder@users.noreply.github.com"
+          mkdir -p "$HOME/bin"
+          curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - name: Sync Lineage 23.2 source
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/android"
+          cd "$GITHUB_WORKSPACE/android"
+          repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1
+          mkdir -p .repo/local_manifests
+          cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
+          repo sync -c --no-clone-bundle --no-tags --optimized-fetch -j2
+      - name: Build ChatUI Nova
+        working-directory: android
+        env:
+          CHATUI_VERSION: 1.0
+          CHATUI_CODENAME: Nova
+        run: bash "$GITHUB_WORKSPACE/build/chatui-build.sh"
+      - name: Verify artifacts
+        run: |
+          test -n "$(find out-release -maxdepth 1 -type f -name '*.zip' -print -quit)"
+          sha256sum out-release/* | tee out-release/SHA256SUMS.txt
+      - name: Upload ROM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatUI-OS-Nova-1.0-veux
+          path: out-release/
+          if-no-files-found: error
+          retention-days: 30
