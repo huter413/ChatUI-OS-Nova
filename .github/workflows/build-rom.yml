@@ -35,23 +35,26 @@ jobs:
 
       - name: Configure repo
         run: |
+          set -euxo pipefail
           git config --global user.name "ChatUI OS Builder"
           git config --global user.email "chatui-builder@users.noreply.github.com"
           mkdir -p "$HOME/bin"
           curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
           chmod +x "$HOME/bin/repo"
-          echo "$HOME/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/bin:$PATH"
+          command -v repo
           repo --version
+          echo "$HOME/bin" >> "$GITHUB_PATH"
 
       - name: Sync Lineage 23.2 source
         run: |
           set -euo pipefail
+          export PATH="$HOME/bin:$PATH"
+          command -v repo
           rm -rf "$GITHUB_WORKSPACE/android"
           mkdir -p "$GITHUB_WORKSPACE/android"
           cd "$GITHUB_WORKSPACE/android"
 
-          # Avoid the superproject path: the previous run failed during source
-          # synchronization before the Android build could even start.
           repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --partial-clone --clone-filter=blob:none --no-use-superproject
           mkdir -p .repo/local_manifests
           cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
