@@ -20,10 +20,18 @@ jobs:
       - name: Checkout ChatUI build configuration
         uses: actions/checkout@v4
 
+      - name: Free runner disk space
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/powershell /usr/local/share/chromium || true
+          sudo apt-get clean
+          df -h
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y git-core gnupg flex bison build-essential zip curl zlib1g-dev libc6-dev-i386 libncurses5-dev x11proto-core-dev libx11-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig ccache python3 python3-pip bc rsync lz4 libssl-dev libelf-dev
+          df -h
 
       - name: Configure repo
         run: |
@@ -33,29 +41,23 @@ jobs:
           curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
           chmod +x "$HOME/bin/repo"
           echo "$HOME/bin" >> "$GITHUB_PATH"
+          repo --version
 
       - name: Sync Lineage 23.2 source
         run: |
-          set -uo pipefail
+          set -euo pipefail
+          rm -rf "$GITHUB_WORKSPACE/android"
           mkdir -p "$GITHUB_WORKSPACE/android"
           cd "$GITHUB_WORKSPACE/android"
-          repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --partial-clone --clone-filter=blob:none --use-superproject
+
+          # Avoid the superproject path: the previous run failed during source
+          # synchronization before the Android build could even start.
+          repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --partial-clone --clone-filter=blob:none --no-use-superproject
           mkdir -p .repo/local_manifests
           cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
+
           df -h
-
-          # Normalize stale worktrees before syncing. If the parallel sync fails,
-          # repair all worktrees and retry serially with destructive recovery.
-          repo forall -c 'git reset --hard HEAD >/dev/null 2>&1 || true; git clean -fdx >/dev/null 2>&1 || true' || true
-          if repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=5 --force-sync --force-remove-dirty -j2; then
-            echo "Initial repo sync completed."
-          else
-            echo "Initial repo sync failed; performing a full worktree repair and retrying serially."
-            repo forall -c 'git reset --hard HEAD >/dev/null 2>&1 || true; git clean -fdx >/dev/null 2>&1 || true' || true
-            rm -rf .repo/projects/prebuilts/rust.git .repo/projects/prebuilts/rust.git.tmp prebuilts/rust
-            repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=10 --force-sync --force-remove-dirty --prune -j1
-          fi
-
+          repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=10 --force-sync --force-remove-dirty --prune -j1
           df -h
 
       - name: Build ChatUI Nova
