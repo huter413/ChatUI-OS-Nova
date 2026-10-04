@@ -44,13 +44,16 @@ jobs:
           cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
           df -h
 
-          # First sync: keep parallelism low for the GitHub-hosted runner.
-          if repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=5 --force-sync -j2; then
+          # Normalize stale worktrees before syncing. If the parallel sync fails,
+          # repair all worktrees and retry serially with destructive recovery.
+          repo forall -c 'git reset --hard HEAD >/dev/null 2>&1 || true; git clean -fdx >/dev/null 2>&1 || true' || true
+          if repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=5 --force-sync --force-remove-dirty -j2; then
             echo "Initial repo sync completed."
           else
-            echo "Initial repo sync failed; repairing the failed worktree and retrying serially."
-            rm -rf prebuilts/rust
-            repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=8 --force-sync --force-remove-dirty -j1
+            echo "Initial repo sync failed; performing a full worktree repair and retrying serially."
+            repo forall -c 'git reset --hard HEAD >/dev/null 2>&1 || true; git clean -fdx >/dev/null 2>&1 || true' || true
+            rm -rf .repo/projects/prebuilts/rust.git .repo/projects/prebuilts/rust.git.tmp prebuilts/rust
+            repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=10 --force-sync --force-remove-dirty --prune -j1
           fi
 
           df -h
