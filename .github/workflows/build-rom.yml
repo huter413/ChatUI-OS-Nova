@@ -36,14 +36,23 @@ jobs:
 
       - name: Sync Lineage 23.2 source
         run: |
-          set -euxo pipefail
+          set -uo pipefail
           mkdir -p "$GITHUB_WORKSPACE/android"
           cd "$GITHUB_WORKSPACE/android"
           repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --partial-clone --clone-filter=blob:none --use-superproject
           mkdir -p .repo/local_manifests
           cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
           df -h
-          repo sync -c --no-clone-bundle --no-tags --optimized-fetch --fail-fast --retry-fetches=3 -j2
+
+          # First sync: keep parallelism low for the GitHub-hosted runner.
+          if repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=5 --force-sync -j2; then
+            echo "Initial repo sync completed."
+          else
+            echo "Initial repo sync failed; repairing the failed worktree and retrying serially."
+            rm -rf prebuilts/rust
+            repo sync -c --no-clone-bundle --no-tags --optimized-fetch --retry-fetches=8 --force-sync --force-remove-dirty -j1
+          fi
+
           df -h
 
       - name: Build ChatUI Nova
