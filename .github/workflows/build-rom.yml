@@ -55,7 +55,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/android"
           cd "$GITHUB_WORKSPACE/android"
 
-          repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --partial-clone --clone-filter=blob:none --no-use-superproject
+          repo init -u https://github.com/accupara/los23.2.git -b lineage-23.2 --depth=1 --no-use-superproject
           mkdir -p .repo/local_manifests
           cp "$GITHUB_WORKSPACE/.repo/local_manifests/chatui_veux.xml" .repo/local_manifests/chatui_veux.xml
 
